@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import models, transforms
 from tqdm import tqdm
 
-from dataset import EuroSAT, ImageFiles, random_split
+from dataset import *
 
 # to be sure that we don't mix them, use this instead of a tuple
 TestResult = namedtuple('TestResult', 'truth predictions')
@@ -75,17 +75,16 @@ def main(args):
     tr = transforms.Compose([transforms.ToTensor(), transforms.Normalize(**normalization)])
     if args.files:
         test = ImageFiles(args.files, transform=tr)
+        test_dl = torch.utils.data.DataLoader(
+            test, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True
+        )
     else:
-        dataset = EuroSAT(transform=tr)
-        trainval, test = random_split(dataset, 0.9, random_state=42)
+        test_dl, classes = get_test_loader(normalization, args.batch_size, args.workers)
 
-    test_dl = torch.utils.data.DataLoader(
-        test, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True
-    )
     result = predict(model, test_dl, paths=args.files)
 
     if not args.files:  # this is the test, so we need to analyze results
-        report(result, dataset.classes)
+        report(result, classes)
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import models, transforms
 from tqdm import tqdm, trange
 
-from dataset import EuroSAT, random_split
+from dataset import *
 from predict import predict
 
 
@@ -22,54 +22,20 @@ class State:
     normalization = None
 
 
-def calc_normalization(train_dl: torch.utils.data.DataLoader):
-    "Calculate the mean and std of each channel on images from `train_dl`"
-    mean = torch.zeros(3)
-    m2 = torch.zeros(3)
-    n = len(train_dl)
-    for images, labels in tqdm(train_dl, "Compute normalization"):
-        mean += images.mean([0, 2, 3]) / n
-        m2 += (images ** 2).mean([0, 2, 3]) / n
-    var = m2 - mean ** 2
-    return mean, var.sqrt()
+
 
 
 def main(args):
-    dataset = EuroSAT(
-        transform=transforms.Compose(
-            [
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
-                transforms.ToTensor(),
-            ]
-        )
-    )
-    trainval, test_ds = random_split(dataset, 0.9, random_state=42)
-    train_ds, val_ds = random_split(trainval, 0.9, random_state=7)
-
-    # load train dataset with computed normalization
-    train_dl = torch.utils.data.DataLoader(
-        train_ds,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.workers,
-        pin_memory=True,
-    )
-    mean, std = calc_normalization(train_dl)
-    dataset.transform.transforms.append(transforms.Normalize(mean, std))
-    State.normalization = {'mean': mean, 'std': std}
-
-    # load val dataset
-    val_dl = torch.utils.data.DataLoader(
-        val_ds, batch_size=args.batch_size, num_workers=args.workers, pin_memory=True
-    )
+    train_dl, val_dl, State.normalization, classes = get_train_loader(args.batch_size, args.workers)
+    mean = State.normalization['mean']
+    std = State.normalization['std']
 
     # create/load model, changing the head for our number of classes
     model = models.resnet50(pretrained=args.pretrained)
     if args.pretrained:
         for param in model.parameters():
             param.requires_grad = False
-    model.fc = nn.Linear(model.fc.in_features, len(dataset.classes))
+    model.fc = nn.Linear(model.fc.in_features, len(classes))
     model = model.to(args.device)
     loss = nn.CrossEntropyLoss()
 
