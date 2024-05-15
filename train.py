@@ -65,7 +65,7 @@ def main(args):
             print(f"New best validation accuracy: {val_acc}")
             State.best_acc = val_acc
             shutil.copy('weights/checkpoint.pt', 'weights/best.pt')
-
+    torch.save(model, 'weights/resnet50_eurosat.pth')
 
 def train_epoch(train_dl, model, loss, optimizer, epoch, args):
     model.train()
