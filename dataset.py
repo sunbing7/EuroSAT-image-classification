@@ -96,6 +96,7 @@ def get_train_loader(batch_size, workers):
         pin_memory=True,
     )
     mean, std = calc_normalization(train_dl)
+    print('[DEBUG] mean {}, std {}'.format(mean, std))
     dataset.transform.transforms.append(transforms.Normalize(mean, std))
     normalization = {'mean': mean, 'std': std}
 
