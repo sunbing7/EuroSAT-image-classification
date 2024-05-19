@@ -32,9 +32,9 @@ def main(args):
 
     # create/load model, changing the head for our number of classes
     model = models.resnet50(pretrained=args.pretrained)
-    if args.pretrained:
-        for param in model.parameters():
-            param.requires_grad = False
+    #if args.pretrained:
+    #    for param in model.parameters():
+    #        param.requires_grad = False
     model.fc = nn.Linear(model.fc.in_features, len(classes))
     model = model.to(args.device)
     loss = nn.CrossEntropyLoss()
